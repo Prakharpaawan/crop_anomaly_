@@ -1,0 +1,5 @@
+Held-out fields, default configuration.
+
+| configuration                                             | precision   | recall      | f1          | pr_auc | roc_auc | false_alarms |
+|-----------------------------------------------------------|-------------|-------------|-------------|--------|---------|--------------|
+| LOF · multispectral · k=5 · P90 per-field · 2-consecutive | 0.300±0.004 | 0.467±0.007 | 0.366±0.005 | 0.33   | 0.765   | 8,325        |

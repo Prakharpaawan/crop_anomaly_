@@ -1,0 +1,10 @@
+All methods share features, threshold source and persistence rule; only the score differs.
+
+| method              | type       | precision   | recall      | f1          | pr_auc | roc_auc | false_alarms |
+|---------------------|------------|-------------|-------------|-------------|--------|---------|--------------|
+| LOF                 | learned    | 0.315±0.004 | 0.396±0.006 | 0.351±0.005 | 0.342  | 0.783   | 6,586        |
+| Isolation Forest    | learned    | 0.188±0.001 | 0.140±0.001 | 0.161±0.001 | 0.213  | 0.675   | 4,642        |
+| Autoencoder         | learned    | 0.215±0.004 | 0.156±0.003 | 0.181±0.003 | 0.209  | 0.652   | 4,354        |
+| Fixed % drop        | rule-based | 0.545±0.009 | 0.242±0.007 | 0.336±0.008 | 0.387  | 0.686   | 1,544        |
+| Per-field z-score   | rule-based | 0.496±0.011 | 0.195±0.006 | 0.279±0.008 | 0.45   | 0.79    | 1,513        |
+| Rolling-median dev. | rule-based | 0.354±0.019 | 0.022±0.002 | 0.041±0.003 | 0.211  | 0.683   | 303          |

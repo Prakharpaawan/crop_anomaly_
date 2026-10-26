@@ -1,0 +1,36 @@
+{
+  "protocol": "fit+calibrate on 1,987 fields -> evaluate on 1,325 unseen fields (2019)",
+  "e1_gain": {
+    "diff": 0.10736822003500852,
+    "p": 0.0651
+  },
+  "best_k": 5,
+  "best_threshold": "P82 (per-field)",
+  "final": {
+    "precision": 0.3003533224138479,
+    "recall": 0.46735792628056017,
+    "f1": 0.3656864625014306,
+    "specificity": 0.8162585093860754,
+    "false_alarms": 8325.4,
+    "missed": 4073.4,
+    "tp": 3574.2,
+    "tn": 36985.0,
+    "pr_auc": 0.33036076213141435,
+    "roc_auc": 0.7645041946573679,
+    "seed": 486.8,
+    "severity": 0.4,
+    "duration": 2.0,
+    "percentile": 90.0,
+    "min_consecutive": 2.0,
+    "n_test": 52958.0,
+    "n_stressed": 7647.6,
+    "f1_ci": [
+      0.3651208088510499,
+      0.38314890471733615
+    ],
+    "features": "multispectral",
+    "n_neighbors": 5,
+    "fields": 3312,
+    "protocol": "fit 2018 -> monitor 2019"
+  }
+}

@@ -1,0 +1,27 @@
+# ── Raw data: never versioned, never delete (see HANDOFF.md) ─────────
+/dataset_clean_2/
+/archive (1)/
+
+# ── Superseded work and the empty venv ───────────────────────────────
+/old/
+/.venv/
+/.vscode/
+/hybrid_pipeline_experiments/
+/hybrid_pipeline_experiments2/
+
+# ── Regenerable intermediates ────────────────────────────────────────
+crop_stress/cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ── Large derived tables and fitted models (rebuilt by engine/main.py) ─
+crop_stress/engine/outputs/*.csv
+crop_stress/engine/models/
+crop_stress/multispectral/data/
+crop_stress/outputs/multispectral/final_scored.csv
+
+# ── Personal and stale documents ─────────────────────────────────────
+/interview-prep/
+/Interview_QA.pdf
+/INTERVIEW_PREP.html
