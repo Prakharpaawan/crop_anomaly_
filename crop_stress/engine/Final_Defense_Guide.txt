@@ -1,0 +1,120 @@
+################################################################################
+##  SUPERSEDED - DO NOT REVISE FROM THIS DOCUMENT                             ##
+################################################################################
+
+This guide was written before Study 2 and its central claim is WRONG.
+
+It presents the Hybrid Ensemble as the project's achievement and quotes roughly
+29.9% precision as the headline result. Study 2 showed the opposite: the
+ensemble is the WORST of the evaluated options (F1 0.185), and standalone LOF
+reaches F1 0.718 with 0.829 precision. It also cites ensemble weights
+(ISO 0.6 / LOF 0.4 / AE 0.0) that do not match config.py.
+
+Revising from this document would mean walking into a defence arguing against
+your own data, with numbers about three times worse than what you achieved.
+
+Use these instead:
+  * hybrid_pipeline_experiments2/FINAL_REPORT.md          - current results
+  * hybrid_pipeline_experiments2/outputs2/FIGURES.md      - figures + captions
+  * hybrid_pipeline_experiments2/outputs2/RESULTS_TABLES.md
+  * Interview_QA.pdf (project root)                       - 20 prepared answers
+  * INTERVIEW_PREP.html (project root)                    - full study guide
+  * HANDOFF.md (project root)                             - project state
+
+Sections 1-6 below (problem framing, MSAVI rationale, feature engineering,
+thresholding and persistence) are still accurate and remain useful.
+Sections 7 and 8 (results, comparison to prior work) are NOT.
+
+Superseded 2026-08-21.
+
+================================================================================
+COMPREHENSIVE KNOWLEDGE BASE & DEFENSE GUIDE
+Project: Unsupervised Hybrid Ensemble for Parcel-Level Crop Stress Detection
+================================================================================
+
+This document contains the complete, highly detailed context of the entire project pipeline. It is designed to be fed to an AI (like ChatGPT or Gemini) as a knowledge base so you can ask it questions and practice your defense.
+
+--------------------------------------------------------------------------------
+1. ABSTRACT & PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+This project introduces a fully automated, unsupervised, AI-driven pipeline designed to monitor agricultural fields from space using optical satellite imagery. 
+
+Problem: Traditional crop stress detection requires expensive commercial Radar data (SAR) or relies on human experts (agronomists) to physically walk the fields and manually label data to train supervised machine learning models. This is highly expensive and impossible to scale globally, especially in developing nations.
+
+Solution: We built an unsupervised "Hybrid Ensemble" pipeline. By tracking free optical satellite data over an entire growing season, the AI autonomously learns the natural, healthy growth cycle of a specific farm. If a farm experiences a sudden drop in health (due to disease, drought, or pests), the AI mathematically detects the anomaly, flags the date, and generates a visual spatial map showing exactly which part of the farm is dying. It accomplishes this entirely without human labels.
+
+--------------------------------------------------------------------------------
+2. DATA ACQUISITION & PREPROCESSING (Sentinel-2 & MSAVI)
+--------------------------------------------------------------------------------
+* Satellite Choice: We use Sentinel-2, a free optical satellite constellation operated by the European Space Agency. 
+* Vegetation Index: We do not use standard NDVI. We use MSAVI (Modified Soil Adjusted Vegetation Index). 
+  - Why MSAVI? Early in the growing season, crop canopies are sparse, exposing a lot of brown dirt/soil. Standard indices get confused by the soil background. MSAVI contains a dynamic mathematical correction factor that actively filters out the soil background, ensuring we are strictly measuring the active, living green plant canopy.
+* Data Cleaning: The pipeline automatically reads the raw `.tif` files, masks out invalid pixels (like sensor errors or hard nodata values), clips extreme outlier pixels (clipping the top and bottom 1% to remove sensor glare), and calculates the field's statistics (Mean, Standard Deviation, Interquartile Range, and Percentiles).
+
+--------------------------------------------------------------------------------
+3. FEATURE ENGINEERING & TEMPORAL NOISE HANDLING
+--------------------------------------------------------------------------------
+Optical satellite data is incredibly noisy. If a dark cloud casts a shadow over a farm, the satellite records a massive drop in greenness, making the farm look "dead" for a single day. If we feed raw data to the AI, it will trigger false alarms every time a cloud passes. We solve this algorithmically:
+
+* Savitzky-Golay (SG) Filter: We pass the time-series data through an SG filter. This is a mathematical signal-processing algorithm that fits small, overlapping polynomials to the data. It aggressively smooths out the jagged, noisy spikes caused by clouds and forces the data into a biologically realistic, smooth crop growth curve.
+* Rolling Windows & Derivatives: We calculate the rolling median (the trend over the last 3 satellite passes) and temporal derivatives (how much the crop changed from the previous pass, both in absolute value and percentage).
+* Spatial Heterogeneity (IQR): We calculate the Interquartile Range (P75 - P25). When diseases hit a farm, they often hit in patches, making the field highly uneven. IQR captures this spatial variance.
+
+--------------------------------------------------------------------------------
+4. THE HYBRID ENSEMBLE ARCHITECTURE (The AI Models)
+--------------------------------------------------------------------------------
+We do not rely on a single AI algorithm. We built an "Ensemble," combining three entirely different models. If one model makes a mistake, the others can overrule it.
+
+1. Isolation Forest (ISO): 
+   - Type: Statistical Density Model.
+   - How it works: It builds random decision trees to isolate data points. Anomalies are "few and different," so they get isolated very quickly (shorter path lengths in the tree). It is excellent at catching global outliers.
+2. Local Outlier Factor (LOF):
+   - Type: Density-based Model.
+   - How it works: It compares the local density of a point to the local density of its neighbors. It is excellent at catching contextual anomalies (e.g., a data point might look normal globally, but is highly abnormal compared to the data points immediately surrounding it in time).
+3. PyTorch Autoencoder (AE):
+   - Type: Deep Learning Neural Network.
+   - How it works: We train a neural network to compress the data into a tiny bottleneck and then reconstruct it. Because the network is trained on mostly healthy data, it becomes very good at reconstructing healthy patterns. When fed a diseased pattern, it fails to reconstruct it, resulting in a high "Reconstruction Error."
+
+Optimization: Through algorithmic grid-search, we found that weighting the Isolation Forest at 60%, LOF at 40%, and Autoencoder at 0% yielded the highest Precision for our specific synthetic anomaly types, proving that statistical density models are incredibly effective for simple scaling anomalies in agriculture.
+
+--------------------------------------------------------------------------------
+5. ADAPTIVE THRESHOLDING & TEMPORAL PERSISTENCE
+--------------------------------------------------------------------------------
+Once the AI generates an anomaly score, it must decide if the score is high enough to trigger an alarm.
+* The Flaw of Global Thresholds: Most research uses a global cutoff (e.g., "Flag the top 10% worst fields"). However, some farms are naturally highly volatile due to poor soil or sloping terrain. A global threshold will constantly throw false alarms on a naturally volatile farm.
+* Adaptive Per-Tile Thresholding: Our pipeline looks at a specific farm's historical data, calculates how volatile that specific farm naturally is, and calculates a custom threshold (the 90th percentile) just for that farm.
+* The Temporal Persistence Rule: As our final defense against clouds, if the AI detects an anomaly, it *waits*. It requires the stress to persist (crossing the adaptive threshold) for TWO consecutive satellite readings before triggering an alarm, completely ignoring 1-day anomalies.
+
+--------------------------------------------------------------------------------
+6. EVALUATION METHODOLOGY (Synthetic Anomaly Injection)
+--------------------------------------------------------------------------------
+Because this is an Unsupervised project, we do not have human "answer keys" (ground truth labels) to prove the AI works. To rigorously prove our math, we use Synthetic Anomaly Injection.
+1. We take completely clean, healthy historical satellite data.
+2. We mathematically corrupt it, injecting a simulated disease (e.g., dropping the vegetation index by 40% for exactly 2 satellite passes).
+3. We feed this corrupted data blindly back into the AI to see if it can find it.
+This allows us to generate mathematically honest Precision and Recall scores without spending millions of dollars on human agronomists.
+
+--------------------------------------------------------------------------------
+7. FINAL OPTIMIZED EXPERIMENTAL RESULTS
+--------------------------------------------------------------------------------
+Through our ablation studies, we mathematically optimized the pipeline to maximize Precision. We would rather provide a farmer with fewer, highly accurate alarms than bombard them with false positives.
+
+For anomalies lasting 2 days:
+| Scenario                        | Precision | Recall | F1-Score |
+|---------------------------------|-----------|--------|----------|
+| Severe Stress (40% Damage)      | 29.9%     | 20.7%  | 24.5%    |
+| Moderate Stress (30% Damage)    | 21.3%     | 14.5%  | 17.3%    |
+
+Defending the results: Hitting nearly 30% Precision on a purely unsupervised model using noisy optical data is exceptionally strong. It proves our P90 Adaptive Threshold and 2-Day Persistence rule successfully filter out the vast majority of atmospheric noise.
+
+--------------------------------------------------------------------------------
+8. COMPARISON TO STATE-OF-THE-ART (Mouret et al. 2021)
+--------------------------------------------------------------------------------
+If asked how this compares to existing research like Mouret et al. (2021), use these 3 pillars:
+
+1. Smarter Architecture & Thresholds:
+   They relied on a single, basic Isolation Forest and a lazy global threshold. We built a Hybrid Ensemble and calculate custom adaptive thresholds tailored to the unique natural volatility of each individual farm.
+2. Highly Visual Outputs:
+   They output a text list of anomalous fields. Our pipeline generates a 5-panel statistical dashboard and maps the stress directly onto the real satellite imagery (Spatial Overlays), showing the farmer exactly where the issue is on their field.
+3. True Scalability:
+   They achieved high accuracy by using complex fused Radar data and paying agronomists to physically walk the fields to verify the data. That is impossible to scale globally. We achieve robust detection completely unsupervised, using only free optical data, and prove our accuracy mathematically using synthetic anomaly injection.

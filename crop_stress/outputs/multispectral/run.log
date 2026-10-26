@@ -1,0 +1,62 @@
+Protocol: fit+calibrate on 1,987 fields -> evaluate on 1,325 unseen fields (2019)
+  3,312 fields present in both seasons
+  fit 79,420 obs · evaluate 52,958 obs
+  features: 46 multispectral / 11 MSAVI-only
+
+[E1] Index ablation
+    MSAVI only (1 index)       F1 0.243  ROC-AUC 0.676
+    Multispectral (4 indices)  F1 0.351  ROC-AUC 0.783
+    paired difference +0.1074 F1, p = 0.0651
+    -> tables/e1_index_ablation.md
+    -> multispectral downstream
+
+[E2] Detectors and naive baselines
+    LOF                    F1 0.351
+    Isolation Forest       F1 0.161
+    Autoencoder            F1 0.181
+    Fixed % drop           F1 0.336
+    Per-field z-score      F1 0.279
+    Rolling-median dev.    F1 0.041
+    -> tables/e2_model_comparison.md
+
+[E3] LOF neighbourhood size
+    k=5    F1 0.366
+    k=10   F1 0.360
+    k=20   F1 0.352
+    k=35   F1 0.343
+    k=50   F1 0.338
+    k=75   F1 0.329
+    -> k = 5
+    -> tables/e3_n_neighbors.md
+
+[E4] Threshold strategy
+    best: P82 (per-field)  F1 0.378
+    -> tables/e4_threshold.md
+
+[E5] Persistence rule
+    none             F1 0.395
+    2 consecutive    F1 0.366
+    3 consecutive    F1 0.269
+    -> tables/e5_persistence.md
+
+[E6] Detection limits
+    duration 1 done
+    duration 2 done
+    duration 3 done
+    -> tables/e6_detection_limits.md
+
+[E7] Anomaly signature
+    Sudden drop      F1 0.366
+    Gradual onset    F1 0.290
+    Spectral shift   F1 0.513
+    -> tables/e7_anomaly_types.md
+
+[E8] Cross-field protocol (stricter than deployment)
+    unseen fields: F1 0.366  (temporal protocol for reference)
+    -> tables/e8_cross_field.md
+
+[Final] Recommended configuration
+    P 0.300  R 0.467  F1 0.366 (95% CI 0.365-0.383)  ROC-AUC 0.765  PR-AUC 0.330
+    -> tables/final_configuration.md
+
+Complete in 55.2 min
