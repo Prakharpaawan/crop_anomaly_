@@ -1,113 +1,104 @@
-# Crop Stress Detection from Sentinel-2 Imagery
+# Crop Stress Detection Using Sentinel-2 Imagery
 
-Unsupervised anomaly detection that flags crop stress at field level from free
-optical satellite time series, with no labelled training data.
+This project uses Sentinel-2 satellite time-series data to detect potential crop stress at the field level. It uses unsupervised anomaly detection, so the models do not require labelled training data.
 
-**3,328 fields · 25 satellite passes each · 83,200 observations · Lombardy, 2019**
+**Dataset:** 3,328 fields from Lombardy, Italy  
+**Period:** 2019  
+**Observations:** 83,200 across 25 satellite passes
 
-Current configuration: **LOF** + an extreme-value (GPD) threshold at a 3%
-false-alarm risk + strict 2-consecutive persistence, measured on **832 held-out
-fields** → precision **0.876**, recall **0.814**, F1 **0.844**, PR-AUC **0.904**
-(40% severity over 2 observations).
+## Results
 
----
+The current pipeline uses Local Outlier Factor (LOF), a Generalized Pareto Distribution (GPD) threshold, and a two-consecutive-observation persistence rule.
 
-## Where to start
+Evaluation on 832 held-out fields, using simulated stress at 40% severity over two observations, produced the following results:
 
-| If you want to… | Read |
-|---|---|
-| Pick up the project in a new session | **`HANDOFF.md`** — the source of truth |
-| See the current results | **`crop_stress/outputs/study/REPORT.md`** |
-| Understand the folder layout | `crop_stress/README.md` |
-| Work on the paper | `paper/` — read `paper/README.md` first |
-| Know what came from where | `crop_stress/outputs/study/PROVENANCE.md` |
+| Metric | Score |
+|---|---:|
+| Precision | 0.876 |
+| Recall | 0.814 |
+| F1-score | 0.844 |
+| PR-AUC | 0.904 |
 
----
+These results are based on simulated anomalies and should not be interpreted as equivalent to performance on independently verified crop stress in real fields.
 
-## Layout
+## Project Structure
 
-```
+```text
 PBL Project/
-├── README.md                    ← you are here
-├── HANDOFF.md                   ← full project state; read this first
-│
-├── crop_stress/                 ⭐ ALL THE CODE AND RESULTS
-│   ├── study/                       ⭐ work here
-│   ├── engine/                      shared config, utils, models, the feature table
-│   ├── appendix/                    three experiments that exist nowhere else
-│   ├── multispectral/               the independent 4-index study
-│   ├── outputs/                     ⭐ one outputs tree
-│   │   ├── study/                       16 figures, 9 tables, REPORT.md
-│   │   ├── appendix/                    7 figures, 6 tables, REPORT.md
-│   │   └── multispectral/               14 figures, 9 tables, REPORT.md
-│   └── cache/                       regenerable; safe to delete
-│
-├── paper/                       📄 IEEE draft
-├── dataset_clean_2/             ⛔ MSAVI rasters — never delete
-├── archive (1)/                 ⛔ raw 9-band archive — never delete
-└── old/                         🗄️ superseded work; nothing uses it
+├── README.md
+├── HANDOFF.md
+├── crop_stress/
+│   ├── study/          # Main anomaly detection study
+│   ├── engine/         # Shared configuration, utilities and models
+│   ├── appendix/       # Additional experiments
+│   ├── multispectral/  # Study using four spectral indices
+│   ├── outputs/        # Reports, figures and tables
+│   └── cache/          # Cached intermediate data
+├── paper/              # Research paper draft
+├── dataset_clean_2/    # MSAVI raster data
+├── archive (1)/        # Original nine-band data archive
+└── old/                # Earlier project files
 ```
 
-## Running it
+## Where to Start
 
-The `.venv` at the repo root is **empty**. Use the global Python 3.14:
+- `crop_stress/README.md` — overview of the code and project setup.
+- `crop_stress/outputs/study/REPORT.md` — main study results.
+- `crop_stress/outputs/study/PROVENANCE.md` — data sources and experiment details.
+- `paper/README.md` — information about the research paper.
+- `HANDOFF.md` — notes on the current project state and pending work.
 
-```bash
+## Running the Project
+
+The project uses Python and relies on shared configuration, utilities, feature tables and satellite raster data. The `.venv` folder at the repository root is currently empty.
+
+The Python interpreter used during development is:
+
+```text
 C:/Users/prakh/AppData/Local/Programs/Python/Python314/python.exe
 ```
 
-The command you usually want — rebuilds 9 tables, 16 figures, `REPORT.md` and
-`results.json`. ~35 minutes the first time, much faster afterwards:
+To run the main study:
 
 ```bash
-cd crop_stress/study && python run_all.py
+cd crop_stress/study
+python run_all.py
 ```
 
-Re-render the figures only, from the stored results — seconds:
+This rebuilds the study's tables, figures, report and results file. The first run takes approximately 35 minutes, depending on the machine and available data.
+
+To regenerate the figures from stored results:
 
 ```bash
-cd crop_stress/study && python make_figures.py
+cd crop_stress/study
+python make_figures.py
 ```
 
-## ⚠️ The one thing that will break this project
+Make sure the required dependencies are installed and the expected input files are available before running either command.
 
-`crop_stress/study/` has **no data and no pipeline code of its own**. It imports
-`config.py` and `utils/` from `crop_stress/engine/`, reads the 83,200-row feature
-table from `crop_stress/engine/outputs/`, and reads the rasters from
-`dataset_clean_2/`.
+## Evaluation Method
 
-**Do not delete `crop_stress/engine/`, `dataset_clean_2/` or `archive (1)/`.**
-`engine/` is shared machinery, not an old study.
+The 3,328 fields are divided into three disjoint sets:
 
-## The protocol, in one paragraph
+- **Training — 1,664 fields:** The anomaly detectors are fitted using clean observations.
+- **Calibration — 832 fields:** Used to select the threshold and persistence setting.
+- **Testing — 832 fields:** Reserved for the final reported evaluation.
 
-Fields are split three ways, disjointly: **1,664 fit** (detectors fitted here on
-clean rows only), **832 calibration** (the threshold rule and *k* chosen here),
-**832 test** (every reported number, and nothing is ever selected on it). Every
-threshold is calibrated on clean, pre-injection scores. That last point is what
-raised the headline from the earlier 0.718 — computing a percentile on the batch
-that already contains the injections caps recall near 0.6 regardless of detector.
+Thresholds are calibrated using clean, pre-injection anomaly scores. The test set is not used to select the detector or its operating parameters.
 
-## Known state
+## Key Findings
 
-- **The central finding survives every re-measurement.** The project was built
-  around a hybrid ensemble; it is *harmful*. LOF scores F1 **0.844** against
-  **0.354** for the hybrid, and the failure is in recall (0.814 → 0.230), not
-  precision — averaging a strong ranking with weak ones stops the alarms firing.
-- **Three earlier claims were corrected.** The sliding 2-of-3 rule is *causal*
-  (the old audit said otherwise); held-out evaluation costs only 0.021 F1; and
-  the multispectral study's protocol claim is withdrawn.
-- **The recommended operating point is not uniformly better.** It beats its
-  predecessor on 9 of 11 severity/duration cells but loses on the weakest two —
-  F1 0.077 at 10% severity. That belongs in the paper as a trade-off, not a
-  footnote.
-- **Absolute numbers are an upper bound.** Stress is simulated by scaling six of
-  the sixteen feature columns, so a simulated event is a large coherent
-  displacement in the detector's own feature space. The comparisons between
-  configurations are the reliable part. `paper/main.tex` §VII says this.
-- **`Interview_QA.pdf` and `INTERVIEW_PREP.html` are out of date** — they teach
-  the old F1 0.718 story and have not been regenerated.
-- **Not under version control.** No git history, so deletions are permanent.
-  Consider `git init`.
+LOF performed better than the hybrid ensemble evaluated in this project. The LOF configuration achieved an F1-score of 0.844, compared with 0.354 for the hybrid ensemble. The difference was mainly due to recall, which fell to 0.230 with the hybrid approach.
 
-Open items and limitations: `HANDOFF.md` §10 and `crop_stress/README.md`.
+The evaluation also identified several limitations and trade-offs:
+
+- The recommended configuration performed better in nine of eleven tested severity-duration combinations, but results were weaker for the least severe anomalies.
+- The stress events were simulated by scaling six of the sixteen feature columns. This makes the evaluation useful for comparing configurations, but it does not establish equivalent performance on real crop stress.
+- The reported metrics depend on the simulation settings, feature representation and threshold calibration protocol.
+- The multispectral study has separate evaluation limitations documented in its report.
+
+Further details and outstanding work are documented in `HANDOFF.md` and `crop_stress/README.md`.
+
+## Limitations
+
+The project is an experimental crop stress detection pipeline. Its results demonstrate how unsupervised anomaly detection methods compare under the chosen simulation protocol. Validation against independently labelled real-world crop stress is still needed before drawing conclusions about operational performance in agricultural settings.
